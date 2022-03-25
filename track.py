@@ -129,10 +129,16 @@ def detect(imgs, idxs, img_wh, opt):
                         instance_dict['frame-idx']=frame_idx
 
                         bbox={}
-                        bbox['xmin'] = output[0]/img_width
-                        bbox['ymax'] = (img_height - output[1])/img_height
-                        bbox['xmax'] = output[2]/img_width
-                        bbox['ymin'] = (img_height - output[3])/img_height
+                        # old coordinates:
+                        # bbox['xmin'] = output[0]/img_width
+                        # bbox['ymax'] = (img_height - output[1])/img_height
+                        # bbox['xmax'] = output[2]/img_width
+                        # bbox['ymin'] = (img_height - output[3])/img_height
+                        # new coordinates
+                        bbox['xmin'] = output[0] / img_width
+                        bbox['ymin'] = output[1] / img_height
+                        bbox['xmax'] = output[2] / img_width
+                        bbox['ymax'] = output[3] / img_height
                         instance_dict['bbox']=bbox
 
                         confidence=float(conf)
