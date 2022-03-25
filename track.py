@@ -1,22 +1,22 @@
-import torch.backends.cudnn as cudnn
-import torch
-import cv2
-from pathlib import Path
-import time
-import shutil
-import platform
-import os
-import argparse
-from local.Yolov5_DeepSort_Pytorch.deep_sort_pytorch.deep_sort import DeepSort
-from local.Yolov5_DeepSort_Pytorch.deep_sort_pytorch.utils.parser import get_config
-from local.Yolov5_DeepSort_Pytorch.yolov5.utils.plots import plot_one_box
-from local.Yolov5_DeepSort_Pytorch.yolov5.utils.torch_utils import select_device, time_sync
-from local.Yolov5_DeepSort_Pytorch.yolov5.utils.general import check_img_size, non_max_suppression, scale_coords, check_imshow, xyxy2xywh
-from local.Yolov5_DeepSort_Pytorch.yolov5.utils.datasets import LoadImages, LoadStreams
-from local.Yolov5_DeepSort_Pytorch.yolov5.models.experimental import attempt_load
-from local.Yolov5_DeepSort_Pytorch.yolov5.utils.downloads import attempt_download
 import sys
 sys.path.insert(0, './yolov5')
+from local.Yolov5_DeepSort_Pytorch.yolov5.utils.downloads import attempt_download
+from local.Yolov5_DeepSort_Pytorch.yolov5.models.experimental import attempt_load
+from local.Yolov5_DeepSort_Pytorch.yolov5.utils.datasets import LoadImages, LoadStreams
+from local.Yolov5_DeepSort_Pytorch.yolov5.utils.general import check_img_size, non_max_suppression, scale_coords, check_imshow, xyxy2xywh
+from local.Yolov5_DeepSort_Pytorch.yolov5.utils.torch_utils import select_device, time_sync
+from local.Yolov5_DeepSort_Pytorch.yolov5.utils.plots import plot_one_box
+from local.Yolov5_DeepSort_Pytorch.deep_sort_pytorch.utils.parser import get_config
+from local.Yolov5_DeepSort_Pytorch.deep_sort_pytorch.deep_sort import DeepSort
+import argparse
+import os
+import platform
+import shutil
+import time
+from pathlib import Path
+import cv2
+import torch
+import torch.backends.cudnn as cudnn
 
 
 def compute_color_for_id(label):
@@ -37,11 +37,11 @@ def detect(imgs, idxs, img_wh, opt):
     # initialize deepsort
     cfg = get_config()
     cfg.merge_from_file(opt.config_deepsort)
-
+    
     attempt_download(deep_sort_weights, repo='mikel-brostrom/Yolov5_DeepSort_Pytorch')
-    # TODO: avoid this download by placing the weights in the home dir of forked repo
-    #
-    #      play with the weights // config HYPs once testing is set up (optimize for usecase)
+    #TODO: avoid this download by placing the weights in the home dir of forked repo
+    #      
+    #      play with the weights // config HYPs once testing is set up (optimize for usecase) 
 
     deepsort = DeepSort(cfg.DEEPSORT.REID_CKPT,
                         max_dist=cfg.DEEPSORT.MAX_DIST, min_confidence=cfg.DEEPSORT.MIN_CONFIDENCE,
@@ -52,7 +52,7 @@ def detect(imgs, idxs, img_wh, opt):
     # Initialize
     device = select_device(opt.device)
 
-    # TODO: delete lines 58-64 (below here if --evaluate remains unused)
+    #TODO: delete lines 58-64 (below here if --evaluate remains unused)
 
     # The MOT16 evaluation runs multiple inference streams in parallel, each one writing to
     # its own .txt file. Hence, in that case, the output folder is not restored
@@ -78,8 +78,8 @@ def detect(imgs, idxs, img_wh, opt):
         model(torch.zeros(1, 3, imgsz, imgsz).to(device).type_as(next(model.parameters())))  # run once
     t0 = time.time()
 
-    output_dict = {}
-
+    output_dict={}
+    
     for relative_frame, (img, im0s, ems, frame_idx) in enumerate(dataset):
         img = torch.from_numpy(img).to(device)
         img = img.half() if half else img.float()  # uint8 to fp16/32
@@ -118,47 +118,42 @@ def detect(imgs, idxs, img_wh, opt):
 
                 # pass detections to deepsort
                 outputs = deepsort.update(xywhs.cpu(), confs.cpu(), clss, im0)
-
+                
                 # draw boxes for visualization
                 if len(outputs) > 0:
-                    for j, (output, conf) in enumerate(zip(outputs, confs)):
+                    for j, (output, conf) in enumerate(zip(outputs, confs)): 
                         id = int(output[4])
 
-                        instance_dict = {}
-                        instance_dict['ems'] = ems
-                        instance_dict['frame-idx'] = frame_idx
+                        instance_dict={}
+                        instance_dict['ems']=ems
+                        instance_dict['frame-idx']=frame_idx
 
-                        bbox = {}
-                        # The old coordinate system:
-                        # bbox['xmin'] = output[0]/img_width
-                        # bbox['ymax'] = (img_height - output[1])/img_height
-                        # bbox['xmax'] = output[2]/img_width
-                        # bbox['ymin'] = (img_height - output[3])/img_height
-                        bbox['xmin'] = output[0] / img_width
-                        bbox['ymin'] = output[1] / img_height
-                        bbox['xmax'] = output[2] / img_width
-                        bbox['ymax'] = output[3] / img_height
-                        instance_dict['bbox'] = bbox
+                        bbox={}
+                        bbox['xmin'] = output[0]/img_width
+                        bbox['ymax'] = (img_height - output[1])/img_height
+                        bbox['xmax'] = output[2]/img_width
+                        bbox['ymin'] = (img_height - output[3])/img_height
+                        instance_dict['bbox']=bbox
 
-                        confidence = float(conf)
-                        instance_dict['confidence'] = confidence
-
+                        confidence=float(conf)
+                        instance_dict['confidence']=confidence
+                        
                         if id not in output_dict:
-                            obj_dict = {}
-                            obj_dict['start-and-end-times'] = None
-                            label = names[int(output[5])]
-                            obj_dict['label'] = label
+                            obj_dict={}
+                            obj_dict['start-and-end-times']=None
+                            label= names[int(output[5])]
+                            obj_dict['label']=label
                             color = compute_color_for_id(id)
-                            obj_dict['colour'] = color
+                            obj_dict['colour']=color
 
-                            frames_list = [None]*dataset_length
-                            frames_list[relative_frame] = instance_dict
-                            obj_dict['frames'] = frames_list
+                            frames_list=[None]*dataset_length
+                            frames_list[relative_frame]=instance_dict
+                            obj_dict['frames']=frames_list
 
-                            output_dict[id] = obj_dict
+                            output_dict[id]=obj_dict
 
                         else:
-                            output_dict[id]['frames'][relative_frame] = instance_dict
+                            output_dict[id]['frames'][relative_frame]=instance_dict
 
             else:
                 deepsort.increment_ages()
@@ -176,11 +171,10 @@ def detect(imgs, idxs, img_wh, opt):
 def parse_opt(known=False):
     parser = argparse.ArgumentParser()
     parser.add_argument('--yolo_weights', type=str, default='yolov5/weights/yolov5s.pt', help='model.pt path')
-    parser.add_argument('--deep_sort_weights', type=str,
-                        default='deep_sort_pytorch/deep_sort/deep/checkpoint/ckpt.t7', help='ckpt.t7 path')
+    parser.add_argument('--deep_sort_weights', type=str, default='deep_sort_pytorch/deep_sort/deep/checkpoint/ckpt.t7', help='ckpt.t7 path')
 
     # file/folder, 0 for webcam
-    # TODO: figure out if a folder of images can be passed as opposed to a video (will avoid
+    #TODO: figure out if a folder of images can be passed as opposed to a video (will avoid
     #      stitching together the snapshots, but may require saving the images in a file which may
     #      be suboptimal compared to the video stitch method)
     #      IDEALLY: lets see if we can just pass in the PIL images directly as that's likely what's
@@ -195,15 +189,14 @@ def parse_opt(known=False):
     parser.add_argument('--agnostic-nms', action='store_true', help='class-agnostic NMS')
     parser.add_argument('--augment', action='store_true', help='augmented inference')
     parser.add_argument('--evaluate', action='store_true', help='MOT16 evaluation')
-    parser.add_argument("--config_deepsort", type=str,
-                        default="local/Yolov5_DeepSort_Pytorch/deep_sort_pytorch/configs/deep_sort.yaml")
+    parser.add_argument("--config_deepsort", type=str, default="local/Yolov5_DeepSort_Pytorch/deep_sort_pytorch/configs/deep_sort.yaml")
     #  parser.add_argument("--config_deepsort", type=str, default="deep_sort_pytorch/configs/deep_sort.yaml")
     args = parser.parse_known_args()[0] if known else parser.parse_args()
     args.img_size = check_img_size(args.img_size)
     return args
 
 
-# TODO: this my fail, I'm not sure if kwargs can be anything but the only param
+#TODO: this my fail, I'm not sure if kwargs can be anything but the only param
 #     - check to see if parse_known_args()[0] refers to the nth parameter of track()
 def track(imgs, idxs, img_wh, **kwargs):
     # Usage: import track; track.track(imgsz=320, yolo_weights='yolov5m.pt')
@@ -211,12 +204,11 @@ def track(imgs, idxs, img_wh, **kwargs):
     for k, v in kwargs.items():
         setattr(args, k, v)
     with torch.no_grad():
-        # TODO: this my fail, I'm not sure if kwargs can be anything but the only param
+        #TODO: this my fail, I'm not sure if kwargs can be anything but the only param
         out = detect(imgs, idxs, img_wh, args)
         return out
 
-
 if __name__ == '__main__':
-    args = parse_opt()
+    args=parse_opt()
     with torch.no_grad():
         detect(args)
